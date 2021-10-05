@@ -24,3 +24,18 @@ systemctl status ss-main
 ```Shell
 systemctl disable ss-main
 ```
+<details open>
+  <summary>更新记录</summary>
+  <table>
+    <caption><i><b>2021年10月06日 04:41:24</b></i></caption>
+    <thead>
+      <tr>
+        <th>项目</th>
+        <th>更新详情</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>shadowsocks-rust</td><td><a href=https://github.com/shadowsocks/shadowsocks-rust/commit/62d14451dbfb0a18252c82d906a61de2f1fda490>compatible with old API run_local</a></td></tr>
+    </tbody>
+  </table>
+</details>
