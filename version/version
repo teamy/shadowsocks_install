@@ -1,4 +1,4 @@
-ss_main=446f9d48aa8a2866b8c59b6127b2063f201f8439
+ss_main=c497f6e6f6cfc315d04a22a84afd9a657cf664ac
 ss_tool=f6b9fcfde9b16c51ca00964c3ac9cf02e32ce0cf
 kcptun_android=4912c48c99c9678ba0490ee1488a38a7b8ce5b1c
 shadowsocks_android=1c73e48cc6e590aa628179ab6687558c901693a5
@@ -11,4 +11,4 @@ php=php-8.0.11
 python=3.9.7
 nginx_quiche=1.18.0
 nginx_quic=1ead7d64e993
-shadowsocks_rust=62d14451dbfb0a18252c82d906a61de2f1fda490
+shadowsocks_rust=edfea667839dfbb0e4b1b0e0c2ce1fef677cd59f

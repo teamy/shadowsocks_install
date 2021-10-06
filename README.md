@@ -27,7 +27,7 @@ systemctl disable ss-main
 <details open>
   <summary>更新记录</summary>
   <table>
-    <caption><i><b>2021年10月06日 04:41:24</b></i></caption>
+    <caption><i><b>2021年10月07日 01:49:45</b></i></caption>
     <thead>
       <tr>
         <th>项目</th>
@@ -35,7 +35,7 @@ systemctl disable ss-main
       </tr>
     </thead>
     <tbody>
-      <tr><td>shadowsocks-rust</td><td><a href=https://github.com/shadowsocks/shadowsocks-rust/commit/62d14451dbfb0a18252c82d906a61de2f1fda490>compatible with old API run_local</a></td></tr>
+      <tr><td>shadowsocks-rust</td><td><a href=https://github.com/shadowsocks/shadowsocks-rust/commit/edfea667839dfbb0e4b1b0e0c2ce1fef677cd59f>release v1.12.0-alpha.8</a></td></tr>
     </tbody>
   </table>
 </details>
