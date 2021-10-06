@@ -204,7 +204,7 @@ Progress_Bar() {
 
 	local run
 	if [ "$3" ]; then
-		[ ${#3} -gt 15 ] && run="${3:0:15}..." || run=$3
+		[ ${#3} -gt 25 ] && run="${3:0:25}..." || run=$3
 	else
 		run='Progress'
 	fi
@@ -506,38 +506,46 @@ Check() {
 		Prompt "The script does not support the package manager in this operating system."
 		Exit
 	fi
-	if ! command_exists systemctl; then
-		Prompt "No command systemctl found."
-		Exit
-	fi
-	local az=0 py package_list=(wget curl netstat pkill socat jq openssl shasum iptables ipset git python3 pip3)
+	local az=0 coi py package_list=(systemctl wget curl netstat pkill socat jq openssl shasum iptables ipset git python3 pip3 ping) package_list2=()
 	for i in ${package_list[@]}; do
 		if ! command_exists $i; then
-			((az++))
-			[ $az -le 1 ] && clear
-			Prompt "${az:-0}. Installing $i ..."
-			case $i in
-			netstat)
-				$common_install net-tools 1>/dev/null
-				;;
-			pkill)
-				$common_install psmisc 1>/dev/null
-				;;
-			shasum)
-				$common_install libdigest-sha-perl 1>/dev/null
-				;;
-			pip3)
-				$common_install python3-pip 1>/dev/null
-				;;
-			*)
-				$common_install $i 1>/dev/null
-				;;
-			esac
-			if [ $? -ne 0 ]; then
-				Prompt "There is an exception when installing the program!"
-				Exit
-			fi
+			package_list2+=($i)
 		fi
+	done
+	for i in ${package_list2[@]}; do
+		((az++))
+		[ $az -le 1 ] && clear
+		case $i in
+		netstat)
+			coi="$common_install net-tools"
+			;;
+		pkill)
+			coi="$common_install psmisc"
+			;;
+		shasum)
+			coi="$common_install libdigest-sha-perl"
+			;;
+		pip3)
+			coi="$common_install python3-pip"
+			;;
+		systemctl)
+			coi="$common_install systemd"
+			;;
+		ping)
+			coi="$common_install iputils-ping"
+			;;
+		*)
+			coi="$common_install $i"
+			;;
+		esac
+		#echo $(((az * 100 / ${#package_list2[*]} * 100) / 100)) | whiptail --gauge "Please wait while installing" 6 60 0
+		Progress_Bar $az ${#package_list2[*]} "Installing $i"
+		$coi 1>/dev/null
+		if [ $? -ne 0 ]; then
+			Prompt "There is an exception when installing the program!"
+			Exit
+		fi
+		#[ $az -eq ${#package_list2[*]} ] && clear
 	done
 	if command_exists python3; then
 		py=$(python3 -c "import platform
