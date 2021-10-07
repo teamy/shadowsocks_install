@@ -186,7 +186,7 @@ if (file_exists($port_list)) {
                 !file_put_contents(
                     "/tmp/android_list",
                     file_get_contents(
-                        "https://github.com/yiguihai/shadowsocks_install/raw/dev/conf/android_list",
+                        $ini_array["URL"] . "/conf/android_list",
                         false,
                         stream_context_create($arrContextOptions)
                     ),
