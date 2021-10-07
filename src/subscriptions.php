@@ -331,6 +331,8 @@ if (file_exists($port_list)) {
         }
         if (is_string($remote_dns)) {
             $array["servers"][$i]["remote_dns"] = (string) $remote_dns;
+        } else {
+            $array["servers"][$i]["remote_dns"] = (string) "1.1.1.1";
         }
         if ($plugin && $plugin_opts) {
             $array["servers"][$i]["plugin"] = (string) $plugin;
