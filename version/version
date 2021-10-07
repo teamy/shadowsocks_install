@@ -11,4 +11,4 @@ php=php-8.0.11
 python=3.9.7
 nginx_quiche=1.18.0
 nginx_quic=1ead7d64e993
-shadowsocks_rust=edfea667839dfbb0e4b1b0e0c2ce1fef677cd59f
+shadowsocks_rust=76dfdbaaf69ff6f18f574662fbf11bf47f0c0687
