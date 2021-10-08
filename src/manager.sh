@@ -689,11 +689,11 @@ Status() {
 	if [ -s /run/ss-manager.pid ]; then
 		read -r ssm </run/ss-manager.pid
 	fi
-	if [ -d /proc/"${ssm:?}" ]; then
+	if [ -d /proc/"${ssm:=lzbx}" ]; then
 		if [ -s /run/ss-daemon.pid ]; then
 			read -r dae </run/ss-daemon.pid
 		fi
-		if [ -d /proc/"${dae:?}" ]; then
+		if [ -d /proc/"${dae:=lzbx}" ]; then
 			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				echo -e "\033[1;37;42mRuning\033[0m"
 			else
@@ -1512,7 +1512,7 @@ Daemon() {
 		read -r pid1 </run/ss-manager.pid
 		read -r pid2 </run/ss-daemon.pid
 		if is_number "$pid1" && is_number "$pid2"; then
-			while [ -d /proc/"${pid1:?}" ] && [ -d /proc/"${pid2:?}" ]; do
+			while [ -d /proc/"${pid1:=lzbx}" ] && [ -d /proc/"${pid2:=lzbx}" ]; do
 				if [ -s $HOME_DIR/port.list ]; then
 					while IFS= read -r line || [ -n "$line" ]; do
 						Parsing_User "$line"
@@ -1588,7 +1588,7 @@ Start() {
 Stop() {
 	for i in /run/ss-manager.pid /run/ss-daemon.pid; do
 		[ -s $i ] && read -r kpid <$i
-		[ -d /proc/"${kpid:?}" ] && kill "$kpid" && rm -f $i
+		[ -d /proc/"${kpid:=lzbx}" ] && kill "$kpid" && rm -f $i
 	done
 }
 
@@ -1923,7 +1923,7 @@ Reload_nginx() {
 	if [ -s /run/nginx.pid ]; then
 		read -r ngx </run/nginx.pid
 	fi
-	if [ -d /proc/"${ngx:?}" ]; then
+	if [ -d /proc/"${ngx:=lzbx}" ]; then
 		Start_nginx_program reload
 	fi
 }
@@ -1945,7 +1945,7 @@ Advanced_features() {
 		if [ -s /run/ssr-redir.pid ]; then
 			read -r srd </run/ssr-redir.pid
 		fi
-		if [ -d /proc/"${srd:?}" ]; then
+		if [ -d /proc/"${srd:=lzbx}" ]; then
 			ret_code=$(curl --silent --output /dev/null --write-out '%{http_code}' --connect-timeout 2 --max-time 4 --url https://www.google.com)
 			#https://stackoverflow.com/a/28356429
 			if [[ ${ret_code:-0} != +(200|301|302) ]]; then
@@ -1959,7 +1959,7 @@ Advanced_features() {
 		if [ -s /run/nginx.pid ]; then
 			read -r ngx </run/nginx.pid
 		fi
-		if [ -d /proc/"${ngx:?}" ]; then
+		if [ -d /proc/"${ngx:=lzbx}" ]; then
 			if [ -s $HOME_DIR/ssl/fullchain.cer ]; then
 				if ! openssl x509 -checkend 86400 -noout -in $HOME_DIR/ssl/fullchain.cer >/dev/null; then
 					if [ ${Language:=zh-CN} = 'en-US' ]; then
@@ -1977,7 +1977,7 @@ Advanced_features() {
 		if [ -s /run/php-fpm.pid ]; then
 			read -r pfm </run/php-fpm.pid
 		fi
-		if [ -d /proc/"${pfm:?}" ]; then
+		if [ -d /proc/"${pfm:=lzbx}" ]; then
 			echo -e "\033[1mphp-fpm运行中 PID: \033[0m\033[7m$pfm\033[0m"
 		fi
 		cat <<EOF
