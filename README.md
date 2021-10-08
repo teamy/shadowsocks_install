@@ -27,7 +27,7 @@ systemctl disable ss-main
 <details open>
   <summary>更新记录</summary>
   <table>
-    <caption><i><b>2021年10月08日 00:22:09</b></i></caption>
+    <caption><i><b>2021年10月08日 08:50:46</b></i></caption>
     <thead>
       <tr>
         <th>项目</th>
@@ -35,7 +35,7 @@ systemctl disable ss-main
       </tr>
     </thead>
     <tbody>
-      <tr><td>shadowsocks-rust</td><td><a href=https://github.com/shadowsocks/shadowsocks-rust/commit/862a8a78b74759636cb902d2196e5c988d6c8a79>remove chroot when daemonizing (#640)</a></td></tr>
+      <tr><td>shadowsocks-rust</td><td><a href=https://github.com/shadowsocks/shadowsocks-rust/commit/c21e12cc26de51d08dfb9379a3619087144c259c>check http TCP mode in check_integrity</a></td></tr>
     </tbody>
   </table>
 </details>
