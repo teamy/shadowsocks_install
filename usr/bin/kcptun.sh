@@ -7,8 +7,8 @@
 SS_ENV_NAMES=(SS_REMOTE_HOST SS_REMOTE_PORT SS_LOCAL_HOST SS_LOCAL_PORT)
 
 for i in "${SS_ENV_NAMES[@]}"; do
-	if [ -z ${!i} ]; then
-		echo Not found env variable $i
+	if [ -z "${!i}" ]; then
+		echo Not found env variable "$i"
 		exit
 	fi
 done
@@ -66,7 +66,7 @@ has_builtin() {
 }
 
 if has_builtin wait && has_builtin trap && has_builtin kill; then
-	"$CMD" -l "${SS_REMOTE_ADDR}" -t "${SS_LOCAL_ADDR}" ${OPTS[@]} &
+	"$CMD" -l "${SS_REMOTE_ADDR}" -t "${SS_LOCAL_ADDR}" "${OPTS[@]}" &
 	child_pid=$!
 	if [ -z "$child_pid" ]; then
 		echo Unknown error occur, cannot get process id of child process. >&2
@@ -89,5 +89,5 @@ if has_builtin wait && has_builtin trap && has_builtin kill; then
 	child_pid=
 	return $wait_result
 else
-	"$CMD" -l "${SS_REMOTE_ADDR}" -t "${SS_LOCAL_ADDR}" ${OPTS[@]}
+	"$CMD" -l "${SS_REMOTE_ADDR}" -t "${SS_LOCAL_ADDR}" "${OPTS[@]}"
 fi
