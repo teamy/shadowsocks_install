@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# shellcheck source=/dev/null
+# shellcheck disable=SC2034  # Unused variables left for readability
 
 NOW_PID=$$
 HOME_DIR=/etc/ssmanager
@@ -16,7 +18,7 @@ Generate_random_numbers() (
 	min=$1
 	max=$(($2 - min + 1))
 	num=$((RANDOM + 1000000000)) #增加一个10位的数再求余
-	echo -n $((num % max + min))
+	printf '%d' $((num % max + min))
 )
 
 Introduction_bar() (
@@ -30,11 +32,13 @@ EOF
 )
 
 Introduction() (
-	echo
-	printf "$*" | Introduction_bar
-	printf "$1\n"
-	printf "$*" | Introduction_bar
-	echo
+	cat >&1 <<-EOF
+
+		$(printf '%s' "$*" | Introduction_bar)
+		$1
+		$(printf '%s' "$*" | Introduction_bar)
+
+	EOF
 )
 
 Prompt_bar() (
@@ -48,11 +52,13 @@ EOF
 )
 
 Prompt() (
-	echo
-	printf "$*" | Prompt_bar
-	printf "$1\n"
-	printf "$*" | Prompt_bar
-	echo
+	cat >&1 <<-EOF
+
+		$(printf '%s' "$*" | Prompt_bar)
+		$1
+		$(printf '%s' "$*" | Prompt_bar)
+
+	EOF
 )
 
 # 判断命令是否存在
@@ -61,14 +67,14 @@ command_exists() {
 	command -v "$@" >/dev/null 2>&1
 }
 
-# 判断输入内容是否为数字
+#https://stackoverflow.com/a/2704760
 is_number() {
-	expr "$1" + 1 >/dev/null 2>&1
+	[ -n "$1" ] && [ "$1" -eq "$1" ] 2>/dev/null
 }
 
 # 按任意键继续
 Press_any_key_to_continue() {
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ "${Language:=zh-CN}" = "en-US" ]; then
 		read -n 1 -r -s -p $'Press any key to start...or Press Ctrl+C to cancel'
 	else
 		read -n 1 -r -s -p $'请按任意键继续或 Ctrl + C 退出\n'
@@ -76,25 +82,25 @@ Press_any_key_to_continue() {
 }
 
 Curl_get_files() {
-	if ! curl -L -s -q --retry 5 --retry-delay 10 --retry-max-time 60 --output $1 $2; then
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if ! curl -L -s -q --retry 5 --retry-delay 10 --retry-max-time 60 --output "$1" "$2"; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "Download $1 failed."
 		else
 			Prompt "下载 $1 文件时失败！"
 		fi
-		rm -f $1
+		rm -f "$1"
 		Exit
 	fi
 }
 
 Wget_get_files() {
-	if ! wget --no-check-certificate -q -c -t2 -T8 -O $1 $2; then
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if ! wget --no-check-certificate -q -c -t2 -T8 -O "$1" "$2"; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "Download $1 failed."
 		else
 			Prompt "下载 $1 文件时失败！"
 		fi
-		rm -f $1
+		rm -f "$1"
 		Exit
 	fi
 }
@@ -179,32 +185,32 @@ Url_encode_pipe() {
 	local c
 	while IFS= read -r c; do
 		case $c in [a-zA-Z0-9.~_-])
-			printf "$c"
+			printf '%s' "$c"
 			continue
 			;;
 		esac
-		printf "$c" | od -An -tx1 | tr ' ' % | tr -d '\n'
+		printf '%s' "$c" | od -An -tx1 | tr ' ' % | tr -d '\n'
 	done <<EOF
 $(fold -w1)
 EOF
 }
 
 Url_encode() (
-	printf "$*" | Url_encode_pipe
+	printf '%s' "$*" | Url_encode_pipe
 )
 
 #https://stackoverflow.com/questions/238073/how-to-add-a-progress-bar-to-a-shell-script
 Progress_Bar() {
-	let _progress=(${1} * 100 / ${2} * 100)/100
-	let _done=(_progress * 4)/10
-	let _left=40-_done
+	_progress=$((100 * $1 / $2))
+	_done=$((_progress * 4 / 10))
+	_left=$((40 - _done))
 
 	_fill=$(printf "%${_done}s")
 	_empty=$(printf "%${_left}s")
 
 	local run
 	if [ "$3" ]; then
-		[ ${#3} -gt 25 ] && run="${3:0:25}..." || run=$3
+		[ ${#3} -gt 15 ] && run="${3:0:15}..." || run=$3
 	else
 		run='Progress'
 	fi
@@ -217,7 +223,7 @@ Address_lookup() {
 	unset -v addr
 	local cur_time last_time tb_addr
 	if [ ! -s /tmp/myaddr ]; then
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			addr=$(wget -qO- -t2 -T3 -U 'curl/7.65.0' https://ipapi.co/json | jq -r '.city + ", " +.region + ", " + .country_name')
 		else
 			addr=$(wget -qO- -t2 -T3 -U 'curl/7.65.0' https://myip.ipip.net)
@@ -232,13 +238,13 @@ Address_lookup() {
 				#https://wangshengxian.com/article/details/article_id/37.html
 				tb_addr=$(wget -qO- -t2 -T3 -U 'curl/7.65.0' "https://ip.taobao.com/outGetIpInfo?ip=${ipv4:-$ipv6}&accessKey=alibaba-inc")
 				if [ "$tb_addr" ]; then
-					case $(echo $tb_addr | jq -r '.code') in
+					case $(echo "$tb_addr" | jq -r '.code') in
 					0)
-						if [ "$(echo $tb_addr | jq -r '.data.region')" = "台湾" ]; then
+						if [ "$(echo "$tb_addr" | jq -r '.data.region')" = "台湾" ]; then
 							tb_addr=${tb_addr/中国/中华民国}
 							tb_addr=${tb_addr/CN/TW}
 						fi
-						addr=$(echo $tb_addr | jq -r '.data.country + " " +.data.region + " " + .data.country_id')
+						addr=$(echo "$tb_addr" | jq -r '.data.country + " " +.data.region + " " + .data.country_id')
 						;;
 					1)
 						Prompt "服务器异常"
@@ -256,7 +262,7 @@ Address_lookup() {
 				fi
 			fi
 		fi
-		[ "$addr" ] && echo $addr >/tmp/myaddr
+		[ "$addr" ] && echo "$addr" >/tmp/myaddr
 	else
 		addr=$(</tmp/myaddr)
 		cur_time=$(date +%s)
@@ -267,7 +273,7 @@ Address_lookup() {
 		fi
 	fi
 	if [ -z "$addr" ]; then
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "Failed to get attribution location!"
 		else
 			Prompt "获取归属地位置失败！"
@@ -305,11 +311,11 @@ Parsing_User() {
 }
 
 Parsing_plugin_opts() (
-	if [ "$1" -a "$2" ]; then
+	if [ "$1" ] && [ "$2" ]; then
 		IFS=';'
 		for l in $1; do
 			if [ "${l%=*}" = "$2" ]; then
-				echo -n ${l#*=}
+				echo -n "${l#*=}"
 			fi
 		done
 	fi
@@ -349,7 +355,7 @@ Used_traffic() (
 		IFS=' '
 		for j in $i; do
 			if [ "${j%\:*}" = "$1" ]; then
-				is_number ${j#*\:} && echo -n ${j#*\:}
+				is_number "${j#*\:}" && echo -n "${j#*\:}"
 			fi
 		done
 	done
@@ -357,11 +363,11 @@ Used_traffic() (
 
 Create_certificate() {
 	unset -v ca_type eab_kid eab_hmac_key tls_common_name tls_key tls_cert
-	tls_key=$HOME_DIR/ssl/server.key
-	tls_cert=$HOME_DIR/ssl/server.cer
-	until [ -s $tls_key -o -s $tls_cert ]; do
-		if [ -z "$nginx_on" -a "$(netstat -ln | grep LISTEN | grep ":80 ")" ]; then
-			if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	tls_key="$HOME_DIR"/ssl/server.key
+	tls_cert="$HOME_DIR"/ssl/server.cer
+	until [ -s $tls_key ] || [ -s $tls_cert ]; do
+		if [ -z "$nginx_on" ] && [ "$(netstat -ln | grep LISTEN | grep ":80 ")" ]; then
+			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				Prompt "Network port 80 is occupied by other processes!"
 			else
 				Prompt "80端口被其它进程占用！"
@@ -369,8 +375,8 @@ Create_certificate() {
 			Exit
 		fi
 		echo
-		if [ -x ${HOME}/.acme.sh/acme.sh ]; then
-			${HOME}/.acme.sh/acme.sh --upgrade
+		if [ -x "${HOME:?}"/.acme.sh/acme.sh ]; then
+			"${HOME:?}"/.acme.sh/acme.sh --upgrade
 		else
 			wget --no-check-certificate -O - https://get.acme.sh | sh
 		fi
@@ -379,7 +385,7 @@ Create_certificate() {
 1. Let’s Encrypt (推荐/Recommend)
 2. ZeroSSL
 EOF
-			read -p $'请选择/Please select \e[95m1-2\e[0m: ' -n1 action
+			read -rp $'请选择/Please select \e[95m1-2\e[0m: ' -n1 action
 			case $action in
 			1)
 				ca_type='letsencrypt'
@@ -391,32 +397,32 @@ EOF
 				;;
 			esac
 		done
-		if [[ $ca_type == "zerossl" ]]; then
+		if [ "$ca_type" = "zerossl" ]; then
 			Introduction "https://github.com/acmesh-official/acme.sh/wiki/ZeroSSL.com-CA"
-			until [ "$eab_kid" -a "$eab_hmac_key" ]; do
-				read -p "EAB KID: " eab_kid
-				read -p "EAB HMAC Key: " eab_hmac_key
+			until [ "$eab_kid" ] && [ "$eab_hmac_key" ]; do
+				read -rp "EAB KID: " eab_kid
+				read -rp "EAB HMAC Key: " eab_hmac_key
 			done
-			${HOME}/.acme.sh/acme.sh --register-account --server $ca_type --eab-kid $eab_kid --eab-hmac-key $eab_hmac_key
+			"${HOME:?}"/.acme.sh/acme.sh --register-account --server "$ca_type" --eab-kid "$eab_kid" --eab-hmac-key "$eab_hmac_key"
 		fi
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Introduction "Please enter your domain name to apply for a certificate"
 		else
 			Introduction "请输入域名以申请证书"
 
 		fi
 		until [ "$tls_common_name" ]; do
-			read -p "(${mr:=默认}: example.com): " tls_common_name
-			if [ -z "$(echo $tls_common_name | grep -oE '^([a-zA-Z0-9](([a-zA-Z0-9-]){0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$')" ]; then
+			read -rp "(${mr:=默认}: example.com): " tls_common_name
+			if [ -z "$(echo "$tls_common_name" | grep -oE '^([a-zA-Z0-9](([a-zA-Z0-9-]){0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$')" ]; then
 				unset -v tls_common_name
 			fi
 		done
 
-		if ${HOME}/.acme.sh/acme.sh --issue --domain $tls_common_name ${nginx_on:=--standalone} -k ec-256 --server $ca_type --force; then
-			if ${HOME}/.acme.sh/acme.sh --install-cert --domain $tls_common_name --cert-file ${tls_cert} --key-file ${tls_key} --ca-file ${HOME_DIR}/ssl/ca.cer --fullchain-file ${HOME_DIR}/ssl/fullchain.cer --ecc --server $ca_type --force; then
+		if "${HOME:?}"/.acme.sh/acme.sh --issue --domain "$tls_common_name" "${nginx_on:=--standalone}" -k ec-256 --server "$ca_type" --force; then
+			if "${HOME:?}"/.acme.sh/acme.sh --install-cert --domain "$tls_common_name" --cert-file "$tls_cert" --key-file "$tls_key" --ca-file ${HOME_DIR:?}/ssl/ca.cer --fullchain-file ${HOME_DIR:?}/ssl/fullchain.cer --ecc --server "$ca_type" --force; then
 				Prompt "$tls_common_name"
 			else
-				if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+				if [ ${Language:=zh-CN} = 'en-US' ]; then
 					Prompt "Failed to install certificate!"
 				else
 					Prompt "安装证书失败！"
@@ -424,7 +430,7 @@ EOF
 				Exit
 			fi
 		else
-			if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				Prompt "Failed to issue certificate!"
 			else
 				Prompt "签发证书失败!"
@@ -433,8 +439,8 @@ EOF
 		fi
 
 	done
-	if [ ! -s $tls_key -o ! -s $tls_cert ]; then
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ! -s $tls_key ] || [ ! -s $tls_cert ]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "The certificate file could not be found!"
 		else
 			Prompt "无法找到证书文件! "
@@ -459,12 +465,12 @@ Check_permissions() (
 )
 
 Local_IP() {
-	source $HOME_DIR/conf/config.ini
+	source ${HOME_DIR:?}/conf/config.ini
 	local cs=5
 	while true; do
 		((cs--))
 		if [ ${cs:-0} -eq 0 ]; then
-			if [[ ${Language:=en-US} == 'zh-CN' ]]; then
+			if [ ${Language:=en-US} = 'zh-CN' ]; then
 				Prompt "获取IP地址失败！"
 			else
 				Prompt "Failed to get IP address!"
@@ -473,12 +479,12 @@ Local_IP() {
 		else
 			ipv4=$(ip -4 -o route get to 8.8.8.8 2>/dev/null | sed -n 's/.*src \([0-9.]\+\).*/\1/p')
 			ipv6=$(ip -6 -o route get to 2001:4860:4860::8888 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p')
-			[ "$ipv4" -a "$Protocol" = "ipv4" ] && unset -v ipv6
-			[ -z "$ipv4" -a "$Protocol" = "ipv4" ] && Protocol=auto
-			[ "$ipv6" -a "$Protocol" = "ipv6" ] && unset -v ipv4
-			[ -z "$ipv6" -a "$Protocol" = "ipv6" ] && Protocol=auto
-			[ "$ipv4" -a "$Protocol" = "auto" -o "$ipv6" = "::1" ] && unset -v ipv6
-			[ "$ipv4" -o "$ipv6" ] && break
+			[ "$ipv4" ] && [ "$Protocol" = "ipv4" ] && unset -v ipv6
+			[ -z "$ipv4" ] && [ "$Protocol" = "ipv4" ] && Protocol=auto
+			[ "$ipv6" ] && [ "$Protocol" = "ipv6" ] && unset -v ipv4
+			[ -z "$ipv6" ] && [ "$Protocol" = "ipv6" ] && Protocol=auto
+			[ "$ipv4" ] && [ "$Protocol" = "auto" ] || [ "$ipv6" = "::1" ] && unset -v ipv6
+			[ "$ipv4" ] || [ "$ipv6" ] && break
 			sleep 1
 		fi
 	done
@@ -507,14 +513,14 @@ Check() {
 		Exit
 	fi
 	local az=0 coi py package_list=(systemctl wget curl netstat pkill socat jq openssl shasum iptables ipset git python3 pip3 ping) package_list2=()
-	for i in ${package_list[@]}; do
-		if ! command_exists $i; then
-			package_list2+=($i)
+	for i in "${package_list[@]}"; do
+		if ! command_exists "$i"; then
+			package_list2+=("$i")
 		fi
 	done
-	for i in ${package_list2[@]}; do
+	for i in "${package_list2[@]}"; do
 		((az++))
-		[ $az -le 1 ] && clear
+		[ "$az" -le 1 ] && clear
 		case $i in
 		netstat)
 			coi="$common_install net-tools"
@@ -539,7 +545,7 @@ Check() {
 			;;
 		esac
 		#echo $(((az * 100 / ${#package_list2[*]} * 100) / 100)) | whiptail --gauge "Please wait while installing" 6 60 0
-		Progress_Bar $az ${#package_list2[*]} "Installing $i"
+		Progress_Bar "$az" ${#package_list2[*]} "Installing $i"
 		$coi 1>/dev/null
 		if [ $? -ne 0 ]; then
 			Prompt "There is an exception when installing the program!"
@@ -556,7 +562,7 @@ else:
   print(1)
 ")
 	fi
-	if [ ${py:-0} -eq 0 ]; then
+	if [ "${py:-0}" -eq 0 ]; then
 		python="${HOME_DIR}/usr/bin/python3"
 		pip="${HOME_DIR}/usr/bin/pip3"
 	fi
@@ -574,7 +580,7 @@ else:
 		fi
 	done
 	if [ -s $HOME_DIR/conf/config.ini ]; then
-		source $HOME_DIR/conf/config.ini
+		source ${HOME_DIR:?}/conf/config.ini
 	fi
 	if [ -z "$URL" ]; then
 		local test1 test2
@@ -604,10 +610,10 @@ else:
 			Exit
 		fi
 	fi
-	if [ "$python" -a "$pip" ]; then
-		if [ ! -f ${python:=python3} -o ! -x ${python:=python3} ]; then
+	if [ "$python" ] && [ "$pip" ]; then
+		if [ ! -f ${python:=python3} ] || [ ! -x ${python:=python3} ]; then
 			Prompt "Python installation package is being downloaded ..."
-			Wget_get_files $HOME_DIR/usr/python.tar.gz https://proxy.freecdn.workers.dev/?url=https://github.com/yiguihai/shadowsocks_install/raw/dev/backups/python.tar.gz
+			Wget_get_files $HOME_DIR/usr/python.tar.gz https://proxy.freecdn.workers.dev/?url=https://github.com/yiguihai/shadowsocks_install/releases/download/python/python-3.10.0.tar.gz
 			Prompt "Unpacking the Python installation package ..."
 			tar zxf $HOME_DIR/usr/python.tar.gz -C $HOME_DIR/usr
 			rm -f $HOME_DIR/usr/python.tar.gz
@@ -628,29 +634,29 @@ else:
 	if [ ! -s $HOME_DIR/conf/update.log ]; then
 		Wget_get_files $HOME_DIR/conf/update.log $URL/version/update
 	fi
-	local dl=() Binary_file_list=($HOME_DIR/usr/bin/kcptun.sh)
+	local dl=() Binary_file_list=("${HOME_DIR:?}/usr/bin/kcptun.sh")
 	while IFS= read -r line || [ -n "$line" ]; do
-		Binary_file_list+=(${line##* })
-	done <$HOME_DIR/conf/update.log
-	for x in ${Binary_file_list[@]}; do
-		if [ ! -f $x -o ! -x $x ]; then
-			dl+=($URL/usr/bin/${x##*/}+$x)
+		Binary_file_list+=("${line##* }")
+	done <"${HOME_DIR:?}"/conf/update.log
+	for x in "${Binary_file_list[@]}"; do
+		if [ ! -f "$x" ] || [ ! -x "$x" ]; then
+			dl+=("$URL/usr/bin/${x##*/}+$x")
 		fi
 	done
-	if [ ${#dl[@]} -gt 0 ]; then
-		downloader ${dl[@]}
+	if [ "${#dl[@]}" -gt 0 ]; then
+		downloader "${dl[@]}"
 	fi
-	for x in ${Binary_file_list[@]}; do
-		if [ ! -f $x ]; then
+	for x in "${Binary_file_list[@]}"; do
+		if [ ! -f "$x" ]; then
 			Prompt "File $x Download failed!"
 			Exit
 		fi
-		if [ ! -x $x ]; then
-			chmod +x $x
+		if [ ! -x "$x" ]; then
+			chmod +x "$x"
 		fi
-		if [ "${x##*/}" = "ss-main" -a ! -L /usr/local/bin/${x##*/} ]; then
-			rm -f /usr/local/bin/${x##*/}
-			ln -s $x /usr/local/bin/${x##*/}
+		if [ "${x##*/}" = "ss-main" ] && [ ! -L /usr/local/bin/"${x##*/}" ]; then
+			rm -f /usr/local/bin/"${x##*/}"
+			ln -s "$x" /usr/local/bin/"${x##*/}"
 		fi
 	done
 	if [ ! -s $HOME_DIR/conf/server_block.acl ]; then
@@ -666,7 +672,7 @@ else:
 }
 
 Author() {
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		echo -e "=========== \033[1mShadowsocks-rust\033[0m Multiport Management by \033[$(Generate_random_numbers 1 7);$(Generate_random_numbers 30 37);$(Generate_random_numbers 40 47)m爱翻墙的红杏\033[0m ==========="
 	else
 		echo -e "=========== \033[1mShadowsocks-rust\033[0m 多端口管理脚本 by \033[$(Generate_random_numbers 1 7);$(Generate_random_numbers 30 37);$(Generate_random_numbers 40 47)m爱翻墙的红杏\033[0m ==========="
@@ -674,28 +680,28 @@ Author() {
 }
 
 Status() {
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		echo -e "Service Status: \c"
 	else
 		echo -e "服务状态: \c"
 	fi
 	local ssm dae
 	if [ -s /run/ss-manager.pid ]; then
-		read ssm </run/ss-manager.pid
+		read -r ssm </run/ss-manager.pid
 	fi
-	if [ -d /proc/${ssm:=ss-manager} ]; then
+	if [ -d /proc/"${ssm:?}" ]; then
 		if [ -s /run/ss-daemon.pid ]; then
-			read dae </run/ss-daemon.pid
+			read -r dae </run/ss-daemon.pid
 		fi
-		if [ -d /proc/${dae:=ss-daemon} ]; then
-			if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ -d /proc/"${dae:?}" ]; then
+			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				echo -e "\033[1;37;42mRuning\033[0m"
 			else
 				echo -e "\033[1;37;42m运行中\033[0m"
 			fi
 			runing=true
 		else
-			if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				echo -e "\033[1;37;43mThe daemon is not running\033[0m"
 			else
 				echo -e "\033[1;37;43m守护脚本未运行\033[0m"
@@ -704,14 +710,14 @@ Status() {
 		fi
 	else
 		if [[ "$(ssmanager -V)" == "shadowsocks"* ]]; then
-			if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				echo -e "\033[1;37;41mStopped\033[0m"
 			else
 				echo -e "\033[1;37;41m未运行\033[0m"
 			fi
 			runing=false
 		else
-			if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				echo -e "\033[1;37;41mSystem incompatibility\033[0m"
 
 			else
@@ -724,13 +730,13 @@ Status() {
 
 Obfs_plugin() {
 	unset -v obfs
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		Introduction "Which network traffic obfuscation you'd select"
 	else
 		Introduction "请选择流量混淆方式"
 	fi
 	local obfs_rust=(http tls)
-	select obfs in ${obfs_rust[@]}; do
+	select obfs in "${obfs_rust[@]}"; do
 		if [ "$obfs" ]; then
 			Prompt "$obfs"
 			break
@@ -742,13 +748,13 @@ V2ray_plugin() {
 	Create_certificate
 
 	unset -v v2ray_mode
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		Introduction "Which Transport mode you'd select"
 	else
 		Introduction "请选择传输模式"
 	fi
 	local mode_list=(websocket-http websocket-tls quic-tls grpc grpc-tls)
-	select v2ray_mode in ${mode_list[@]}; do
+	select v2ray_mode in "${mode_list[@]}"; do
 		if [ "$v2ray_mode" ]; then
 			Prompt "$v2ray_mode"
 			break
@@ -758,28 +764,30 @@ V2ray_plugin() {
 	unset -v v2ray_path v2ray_servicename
 	local v2ray_paths=$(shasum -a1 /proc/sys/kernel/random/uuid)
 	if [[ $v2ray_mode =~ "websocket-" ]]; then
-		until [ $v2ray_path ]; do
-			if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		until [ "$v2ray_path" ]; do
+			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				Introduction "URL path for websocket"
 			else
 				Introduction "请输入一个监听路径(url path)"
 			fi
-			read -p "(${mr:=默认}: ${v2ray_paths%% *}): " v2ray_path
-			[ -z "$(echo $v2ray_path | grep -oE '^[A-Za-z0-9]+$')" ] && unset -v v2ray_path
+			read -rp "(${mr:=默认}: ${v2ray_paths%% *}): " v2ray_path
+			[ -z "$(echo "$v2ray_path" | grep -oE '^[A-Za-z0-9]+$')" ] && unset -v v2ray_path
 			[ -z "$v2ray_path" ] && v2ray_path=${v2ray_paths%% *}
 			#[ "${v2ray_path:0:1}" != "/" ] && v2ray_path="/$v2ray_path"
 			Prompt "$v2ray_path"
 		done
 	fi
-	if [ $v2ray_mode = "grpc-tls" ]; then
-		until [ $v2ray_servicename ]; do
-			if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ "$v2ray_mode" = "grpc-tls" ]; then
+		until [ "$v2ray_servicename" ]; do
+			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				Introduction "Service name for grpc(Requires client support otherwise please leave the default)"
 			else
 				Introduction "请输入gRPC服务的名称(需要客户端支持否则请保持默认)"
 			fi
-			read -p "(${mr:=默认}: GunService): " v2ray_servicename
-			[ -z "$(echo $v2ray_servicename | grep -oE '^[A-Za-z0-9]+$')" ] && unset -v v2ray_servicename
+			read -rp "(${mr:=默认}: GunService): " v2ray_servicename
+			if ! echo "$v2ray_servicename" | grep -oE '^[A-Za-z0-9]+$'; then
+				unset -v v2ray_servicename
+			fi
 			[ -z "$v2ray_servicename" ] && v2ray_servicename=GunService
 			Prompt "$v2ray_servicename"
 		done
@@ -790,7 +798,7 @@ V2ray_plugin() {
 Kcptun_plugin() {
 	Introduction "key"
 	unset -v kcp_key
-	read kcp_key
+	read -r kcp_key
 	[ -z "$kcp_key" ] && kcp_key="$password"
 	[ -z "$kcp_key" ] && kcp_key="it's a secrect"
 	Prompt "$kcp_key"
@@ -798,7 +806,7 @@ Kcptun_plugin() {
 	unset -v kcp_crypt
 	Introduction "crypt"
 	local crypt_list=(aes aes-128 aes-192 salsa20 blowfish twofish cast5 3des tea xtea xor sm4 none)
-	select kcp_crypt in ${crypt_list[@]}; do
+	select kcp_crypt in "${crypt_list[@]}"; do
 		if [ "$kcp_crypt" ]; then
 			Prompt "$kcp_crypt"
 			break
@@ -808,7 +816,7 @@ Kcptun_plugin() {
 	unset -v kcp_mode
 	Introduction "mode"
 	local mode_list=(fast3 fast2 fast normal manual)
-	select kcp_mode in ${mode_list[@]}; do
+	select kcp_mode in "${mode_list[@]}"; do
 		if [ "$kcp_mode" ]; then
 			Prompt "$kcp_mode"
 			break
@@ -817,38 +825,38 @@ Kcptun_plugin() {
 
 	unset -v kcp_mtu
 	Introduction "mtu"
-	read -p "(${mr:=默认}: 1350): " kcp_mtu
-	! is_number $kcp_mtu && kcp_mtu=1350
+	read -rp "(${mr:=默认}: 1350): " kcp_mtu
+	! is_number "$kcp_mtu" && kcp_mtu=1350
 	Prompt "$kcp_mtu"
 
 	unset -v kcp_sndwnd
 	Introduction "sndwnd"
-	read -p "(${mr:=默认}: 1024): " kcp_sndwnd
-	! is_number $kcp_sndwnd && kcp_sndwnd=1024
+	read -rp "(${mr:=默认}: 1024): " kcp_sndwnd
+	! is_number "$kcp_sndwnd" && kcp_sndwnd=1024
 	Prompt "$kcp_sndwnd"
 
 	unset -v kcp_rcvwnd
 	Introduction "rcvwnd"
-	read -p "(${mr:=默认}: 1024): " kcp_rcvwnd
-	! is_number $kcp_rcvwnd && kcp_rcvwnd=1024
+	read -rp "(${mr:=默认}: 1024): " kcp_rcvwnd
+	! is_number "$kcp_rcvwnd" && kcp_rcvwnd=1024
 	Prompt "$kcp_rcvwnd"
 
 	unset -v kcp_datashard
 	Introduction "datashard,ds"
-	read -p "(${mr:=默认}: 10): " kcp_datashard
-	! is_number $kcp_datashard && kcp_datashard=10
+	read -rp "(${mr:=默认}: 10): " kcp_datashard
+	! is_number "$kcp_datashard" && kcp_datashard=10
 	Prompt "$kcp_datashard"
 
 	unset -v kcp_parityshard
 	Introduction "parityshard,ps"
-	read -p "(${mr:=默认}: 3): " kcp_parityshard
-	! is_number $kcp_parityshard && kcp_parityshard=3
+	read -rp "(${mr:=默认}: 3): " kcp_parityshard
+	! is_number "$kcp_parityshard" && kcp_parityshard=3
 	Prompt "$kcp_parityshard"
 
 	unset -v kcp_dscp
 	Introduction "dscp"
-	read -p "(${mr:=默认}: 0): " kcp_dscp
-	! is_number $kcp_dscp && kcp_dscp=0
+	read -rp "(${mr:=默认}: 0): " kcp_dscp
+	! is_number "$kcp_dscp" && kcp_dscp=0
 	Prompt "$kcp_dscp"
 
 	unset -v kcp_nocomp
@@ -861,12 +869,12 @@ Kcptun_plugin() {
 	done
 
 	unset -v extra_parameters
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		Introduction "After setting the basic parameters, do you need to set additional hidden parameters? (Y/N)"
 	else
 		Introduction "基础参数设置完成，你是否需要设置额外的隐藏参数? (Y/N)"
 	fi
-	read -p "(${mr:=默认}: N): " -n1 extra_parameters
+	read -rp "(${mr:=默认}: N): " -n1 extra_parameters
 	echo
 	if [[ $extra_parameters =~ ^[Yy]$ ]]; then
 		unset -v kcp_acknodelay
@@ -880,26 +888,26 @@ Kcptun_plugin() {
 
 		unset -v kcp_nodelay
 		Introduction "nodelay"
-		read -p "(${mr:=默认}: 0): " kcp_nodelay
-		! is_number $kcp_nodelay && kcp_nodelay=0
+		read -rp "(${mr:=默认}: 0): " kcp_nodelay
+		! is_number "$kcp_nodelay" && kcp_nodelay=0
 		Prompt "$kcp_nodelay"
 
 		unset -v kcp_interval
 		Introduction "interval"
-		read -p "(${mr:=默认}: 30): " kcp_interval
-		! is_number $kcp_interval && kcp_interval=30
+		read -rp "(${mr:=默认}: 30): " kcp_interval
+		! is_number "$kcp_interval" && kcp_interval=30
 		Prompt "$kcp_interval"
 
 		unset -v kcp_resend
 		Introduction "resend"
-		read -p "(${mr:=默认}: 2): " kcp_resend
-		! is_number $kcp_resend && kcp_resend=2
+		read -rp "(${mr:=默认}: 2): " kcp_resend
+		! is_number "$kcp_resend" && kcp_resend=2
 		Prompt "$kcp_resend"
 
 		unset -v kcp_nc
 		Introduction "nc"
-		read -p "(${mr:=默认}: 1): " kcp_nc
-		! is_number $kcp_nc && kcp_nc=1
+		read -rp "(${mr:=默认}: 1): " kcp_nc
+		! is_number "$kcp_nc" && kcp_nc=1
 		Prompt "$kcp_nc"
 	fi
 	echo
@@ -909,16 +917,16 @@ Shadowsocks_info_input() {
 	unset -v server_port password method plugin
 	while true; do
 		local sport=$(Generate_random_numbers 1024 65535)
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Introduction "Please enter a port"
 		else
 			Introduction "请输入Shadowsocks远程端口"
 		fi
-		read -p "(${mr:=默认}: $sport): " -n5 server_port
+		read -rp "(${mr:=默认}: $sport): " -n5 server_port
 		[ -z "$server_port" ] && server_port=$sport
-		if is_number $server_port && [ $server_port -gt 0 -a $server_port -le 65535 ]; then
-			if is_number $(Used_traffic $server_port); then
-				if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if is_number "$server_port" && [ "$server_port" -gt 0 ] && [ "$server_port" -le 65535 ]; then
+			if is_number "$(Used_traffic "$server_port")"; then
+				if [ ${Language:=zh-CN} = 'en-US' ]; then
 					Prompt "The port is in normal use!"
 				else
 					Prompt "端口正常使用中！"
@@ -927,7 +935,7 @@ Shadowsocks_info_input() {
 				continue
 			fi
 			if [ "$(netstat -ln | grep LISTEN | grep ":$server_port ")" ]; then
-				if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+				if [ ${Language:=zh-CN} = 'en-US' ]; then
 					Prompt "The port is occupied by another process!"
 				else
 					Prompt "端口被其它进程占用！"
@@ -940,7 +948,7 @@ Shadowsocks_info_input() {
 					IFS='|'
 					for l in $line; do
 						if [ "${l#*^}" = "$server_port" ]; then
-							if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+							if [ ${Language:=zh-CN} = 'en-US' ]; then
 								Prompt "The port already exists in the port list!"
 							else
 								Prompt "端口已存在于端口列表中！"
@@ -960,21 +968,21 @@ Shadowsocks_info_input() {
 
 	local ciphertext=$(base64 -w0 /proc/sys/kernel/random/uuid)
 	local spass=${ciphertext:0:16}
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		Introduction "Please enter a password"
 	else
 		Introduction "请输入Shadowsocks密码"
 	fi
-	read -p "(${mr:=默认}: $spass): " password
+	read -rp "(${mr:=默认}: $spass): " password
 	[ -z "$password" ] && password=$spass
 	Prompt "$password"
 
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		Introduction "Which cipher you'd select"
 	else
 		Introduction "请选择Shadowsocks加密方式"
 	fi
-	select method in ${Encryption_method_list[@]}; do
+	select method in "${Encryption_method_list[@]}"; do
 		if [ "$method" ]; then
 			Prompt "$method"
 			break
@@ -982,29 +990,29 @@ Shadowsocks_info_input() {
 	done
 
 	while true; do
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Introduction "Please enter a value for the traffic limit (MB): "
 		else
 			Introduction "请输入端口流量配额 (MB): "
 		fi
-		read total
-		if is_number $total && [ $total -gt 0 ]; then
+		read -r total
+		if is_number "$total" && [ "$total" -gt 0 ]; then
 			Prompt "$total MB"
 			break
 		fi
 	done
 
 	local add_plugin
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		Introduction "Do you need to add a plugin? (Y/N)"
 	else
 		Introduction "需要加装插件吗? (Y/N)"
 	fi
-	read -p "(${mr:=默认}: N): " -n1 add_plugin
+	read -rp "(${mr:=默认}: N): " -n1 add_plugin
 	if [[ $add_plugin =~ ^[Yy]$ ]]; then
 		echo -e "\r\n"
 		plugin_list=(simple-obfs kcptun v2ray-plugin)
-		select plugin in ${plugin_list[@]}; do
+		select plugin in "${plugin_list[@]}"; do
 			if [ "$plugin" ]; then
 				Prompt "$plugin"
 				break
@@ -1022,10 +1030,9 @@ Shadowsocks_info_input() {
 
 Client_Quantity() (
 	i=0
-	j=0
 	while IFS= read -r line; do
 		((i++))
-		[ $i -le 2 ] && continue #仅跳出当前循环
+		[ "$i" -le 2 ] && continue #仅跳出当前循
 		unset -v proto recv send local_address foreign_address state program_name
 		IFS=' '
 		x=0
@@ -1056,16 +1063,15 @@ Client_Quantity() (
 				;;
 			esac
 		done
-		if [ $state = "ESTABLISHED" ]; then
-			if [ ${local_address##*:} = $1 ]; then
-				((j++))
-				array_reme[j]=${foreign_address%:*}
+		if [ "$state" = "ESTABLISHED" ]; then
+			if [ "${local_address##*:}" = "$1" ]; then
+				array_reme+=("${foreign_address%:*}")
 			fi
 		fi
-	done <$net_file
-	if [ $j -ge 1 ]; then
-		array_reme=($(echo "${array_reme[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
-		echo -n ${#array_reme[@]}
+	done <"$net_file"
+	if [ "${#array_reme[*]}" -ge 1 ]; then
+		local uniq=($(printf "%s\n" "${array_reme[@]}" | sort -u | tr '\n' ' '))
+		printf '%d' "${#uniq[@]}"
 	fi
 )
 
@@ -1075,32 +1081,32 @@ User_list_display() {
 		Check_permissions
 		local color temp_file=$(mktemp) net_file=$(mktemp)
 		if [ -s $HOME_DIR/port.list ]; then
-			netstat -anp46 >$net_file
+			netstat -anp46 >"$net_file"
 			local serial=0 port tz a1 a2 a3 a4 a5 a6 a7
 			#修复无法读取到最后一行的历史问题 https://stackoverflow.com/a/12916758
 			while IFS= read -r line || [ -n "$line" ]; do
 				Parsing_User "$line"
 				if [ "$server_port" ]; then
 					if [[ $plugin != "kcptun.sh" && $plugin_opts != *quic* ]]; then
-						local quantity=$(Client_Quantity $server_port)
+						local quantity=$(Client_Quantity "$server_port")
 					else
-						if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+						if [ ${Language:=zh-CN} = 'en-US' ]; then
 							local quantity='[yellow]Not supported[/yellow]'
 						else
 							local quantity='[yellow]不支持[/yellow]'
 						fi
 					fi
-					local used=$(Used_traffic $server_port)
+					local used=$(Used_traffic "$server_port")
 					((serial++))
-					if [ "$used" -a ${used:--1} -ge 0 ]; then
-						if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+					if [ "$used" ] && [ "${used:=-1}" -ge 0 ]; then
+						if [ ${Language:=zh-CN} = 'en-US' ]; then
 							local status='[green]Normal[/green]'
 						else
 							local status='[green]正常[/green]'
 						fi
 						tz=no
 					else
-						if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+						if [ ${Language:=zh-CN} = 'en-US' ]; then
 							local status='[red]Close[/red]'
 						else
 							local status='[red]停止[/red]'
@@ -1117,13 +1123,13 @@ User_list_display() {
 					fi
 					[ -z "$total" ] && local total=0
 					color=$((used * 100 / total))
-					if [ $color -ge 75 -a $color -le 100 ]; then
+					if [ "$color" -ge 75 ] && [ "$color" -le 100 ]; then
 						color="[red]$color %[/red]"
-					elif [ $color -ge 50 -a $color -le 75 ]; then
+					elif [ "$color" -ge 50 ] && [ "$color" -le 75 ]; then
 						color="[yellow]$color %[/yellow]"
-					elif [ $color -ge 25 -a $color -le 50 ]; then
+					elif [ "$color" -ge 25 ] && [ "$color" -le 50 ]; then
 						color="[green]$color %[/green]"
-					elif [ $color -ge 0 -a $color -le 25 ]; then
+					elif [ "$color" -ge 0 ] && [ "$color" -le 25 ]; then
 						color="[blue]$color %[/blue]"
 					fi
 					if [ "$tz" = "yes" ]; then
@@ -1139,7 +1145,7 @@ User_list_display() {
 					a5="${color:-0}"
 					a6="$quantity"
 					a7="$status"
-					echo "$a1,$a2,$a3,$a4,$a5,$a6,$a7" >>$temp_file
+					echo "$a1,$a2,$a3,$a4,$a5,$a6,$a7" >>"$temp_file"
 				fi
 				unset -v quantity used status color tz a1 a2 a3 a4 a5 a6 a7
 			done <$HOME_DIR/port.list
@@ -1172,15 +1178,15 @@ User_list_display() {
 				console.print(table, justify="center")
 			EOF
 		fi
-		rm -f $net_file $temp_file
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		rm -f "$net_file" "$temp_file"
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			cat <<EOF
 1. Add a Port
 2. Delete a Port
 3. Activate a port
 4. Forcing a Port offline
 EOF
-			read -p $'Please enter a number \e[95m1-3\e[0m: ' -n1 action
+			read -rp $'Please enter a number \e[95m1-3\e[0m: ' -n1 action
 		else
 			cat <<EOF
 1. 添加端口
@@ -1188,7 +1194,7 @@ EOF
 3. 激活端口
 4. 离线端口
 EOF
-			read -p $'请选择 \e[95m1-3\e[0m: ' -n1 action
+			read -rp $'请选择 \e[95m1-3\e[0m: ' -n1 action
 		fi
 		echo
 		case $action in
@@ -1200,14 +1206,14 @@ EOF
 			;;
 		3)
 			while true; do
-				if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+				if [ ${Language:=zh-CN} = 'en-US' ]; then
 					Introduction "Please enter the port to be activated"
 				else
 					Introduction "请输入需要激活的端口"
 				fi
-				read -n5 port
-				if is_number $port && [ $port -gt 0 -a $port -le 65535 ]; then
-					Upload_users $port
+				read -rn5 port
+				if is_number "$port" && [ "$port" -gt 0 ] && [ "$port" -le 65535 ]; then
+					Upload_users "$port"
 					break
 				fi
 			done
@@ -1229,33 +1235,33 @@ Add_user() {
 	clear
 	local userinfo qrv4 qrv6 name plugin_url ss_info=() ss_link=()
 	if [ "$ipv4" ]; then
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
-			ss_info+=(Your_Server_IP\(IPv4\)+$ipv4)
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
+			ss_info+=("Your_Server_IP(IPv4)+$ipv4")
 		else
-			ss_info+=(服务器\(IPv4\)+$ipv4)
+			ss_info+=("服务器(IPv4)+$ipv4")
 		fi
 	fi
 	if [ "$ipv6" ]; then
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
-			ss_info+=(Your_Server_IP\(IPv6\)+$ipv6)
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
+			ss_info+=("Your_Server_IP\(IPv6\)+$ipv6")
 		else
-			ss_info+=(服务器\(IPv6\)+$ipv6)
+			ss_info+=("服务器\(IPv6\)+$ipv6")
 		fi
 	fi
-	if [ "$ipv4" -o "$ipv6" ]; then
+	if [ "$ipv4" ] || [ "$ipv6" ]; then
 		userinfo="$(echo -n "$method:$password" | base64 -w0 | sed 's/=//g; s/+/-/g; s/\//_/g')"
 		#websafe-base64-encode-utf8 不兼容标准的的base64
 		#https://www.liaoxuefeng.com/wiki/1016959663602400/1017684507717184
 	fi
 	name=$(Url_encode "$addr")
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
-		ss_info+=(Your_Server_Port+$server_port)
-		ss_info+=(Your_Password+$password)
-		ss_info+=(Your_Encryption_Method+$method)
+	if [ "${Language:=zh-CN}" = 'en-US' ]; then
+		ss_info+=("Your_Server_Port+$server_port")
+		ss_info+=("Your_Password+$password")
+		ss_info+=("Your_Encryption_Method+$method")
 	else
-		ss_info+=(远程端口+$server_port)
-		ss_info+=(密码+$password)
-		ss_info+=(加密方式+$method)
+		ss_info+=("远程端口+$server_port")
+		ss_info+=("密码+$password")
+		ss_info+=("加密方式+$method")
 	fi
 	case $plugin in
 	simple-obfs)
@@ -1313,29 +1319,29 @@ Add_user() {
 		;;
 	esac
 	if [ "$plugin" ]; then
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
-			ss_info+=(Your_Transport_Plugin+$plugin)
+		if [ "${Language:=zh-CN}" == 'en-US' ]; then
+			ss_info+=("Your_Transport_Plugin+$plugin")
 		else
-			ss_info+=(传输插件+$plugin)
+			ss_info+=("传输插件+$plugin")
 		fi
 	fi
 	if [ "$plugin" ]; then
-		if [ "$userinfo" -a "$ipv4" ]; then
+		if [ "$userinfo" ] && [ "$ipv4" ]; then
 			qrv4="ss://$userinfo@$ipv4:$server_port$plugin_url#$name"
-			ss_link+=($qrv4)
+			ss_link+=("$qrv4")
 		fi
-		if [ "$userinfo" -a "$ipv6" ]; then
+		if [ "$userinfo" ] && [ "$ipv6" ]; then
 			qrv6="ss://$userinfo@[${ipv6}]:$server_port$plugin_url#$name"
-			ss_link+=($qrv6)
+			ss_link+=("$qrv6")
 		fi
 	else
-		if [ "$userinfo" -a "$ipv4" ]; then
+		if [ "$userinfo" ] && [ "$ipv4" ]; then
 			qrv4="ss://$userinfo@$ipv4:$server_port#$name"
-			ss_link+=($qrv4)
+			ss_link+=("$qrv4")
 		fi
-		if [ "$userinfo" -a "$ipv6" ]; then
+		if [ "$userinfo" ] && [ "$ipv6" ]; then
 			qrv6="ss://$userinfo@[${ipv6}]:$server_port#$name"
-			ss_link+=($qrv6)
+			ss_link+=("$qrv6")
 		fi
 	fi
 	${python:=python3} <<-EOF
@@ -1380,15 +1386,15 @@ Add_user() {
 		  print('\033[4;1;35m'+x+'\033[0m')
 	EOF
 	echo
-	if [ "$v2ray_modes" -a "$v2ray_modes" != "quic-tls" ]; then
+	if [ "$v2ray_modes" ] && [ "$v2ray_modes" != "quic-tls" ]; then
 		Reload_nginx
 	fi
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		Introduction "Do you still need to display QR codes and client profiles?"
 	else
 		Introduction "需要显示二维码和客户端配置文件吗？"
 	fi
-	read -p "(${mr:=默认}: N): " -n1 qrv
+	read -rp "(${mr:=默认}: N): " -n1 qrv
 	if [[ $qrv =~ ^[Yy]$ ]]; then
 		clear
 		if [ "$qrv4" ]; then
@@ -1407,36 +1413,40 @@ Add_user() {
 Delete_users() {
 	if [ -s $HOME_DIR/port.list ]; then
 		port=$1
-		until [ $port ]; do
-			if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		until [ "$port" ]; do
+			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				Introduction "Please enter the user port to be deleted"
 			else
 				Introduction "请输入需要删除的端口"
 			fi
-			read -n5 port
-			is_number $port && [ $port -gt 0 -a $port -le 65535 ] && break || unset -v port
+			read -rn5 port
+			if is_number "$port" && [ "$port" -gt 0 ] && [ "$port" -le 65535 ]; then
+				break
+			else
+				unset -v port
+			fi
 		done
 		local temp_file=$(mktemp) pz1 pz2
 		while IFS= read -r line || [ -n "$line" ]; do
 			Parsing_User "$line"
-			if is_number $server_port && is_number $total; then
+			if is_number "$server_port" && is_number $total; then
 				if [[ $server_port -ne $port && $server_port -gt 0 && $server_port -lt 65535 && $password && $method && $total -gt 0 ]]; then
-					echo "server_port^$server_port|password^$password|method^$method|plugin^$plugin|plugin_opts^$plugin_opts|total^$total" >>$temp_file
+					echo "server_port^$server_port|password^$password|method^$method|plugin^$plugin|plugin_opts^$plugin_opts|total^$total" >>"$temp_file"
 				fi
-				if [ $server_port -eq $port ]; then
+				if [ "$server_port" -eq "$port" ]; then
 					ss-tool /tmp/ss-manager.socket "remove: {\"server_port\":$port}" >/dev/null
 					pz1=$plugin
 					pz2=$plugin_opts
 				fi
 			fi
 		done <$HOME_DIR/port.list
-		mv -f $temp_file $HOME_DIR/port.list
+		mv -f "$temp_file" $HOME_DIR/port.list
 		echo
 		if [[ $pz1 == "v2ray-plugin" && $pz2 != *quic* ]]; then
 			Reload_nginx
 		fi
 	else
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "No port list file found"
 		else
 			Prompt "没有找到端口列表文件"
@@ -1449,10 +1459,10 @@ Upload_users() {
 	if [ -s $HOME_DIR/port.list ]; then
 		while IFS= read -r line || [ -n "$line" ]; do
 			Parsing_User "$line"
-			[[ $1 && $1 != $server_port ]] && continue
-			local using=$(Used_traffic $server_port)
-			if is_number $server_port && is_number $total && [ -z $using ] && [ $password -a $method ]; then
-				if [ "$plugin" -a "$plugin_opts" ]; then
+			[ "$1" ] && [ "$1" != "$server_port" ] && continue
+			local using=$(Used_traffic "$server_port")
+			if is_number "$server_port" && is_number "$total" && [ -z "$using" ] && [ "$password" ] && [ "$method" ]; then
+				if [ "$plugin" ] && [ "$plugin_opts" ]; then
 					#echo -e "正在打开\033[32m $server_port \033[0m端口服务 传输插件 $plugin"
 					if [[ $plugin == "kcptun.sh" || $plugin_opts == *quic* ]]; then
 						ss-tool /tmp/ss-manager.socket "add: {\"server_port\":$server_port,\"password\":\"$password\",\"method\":\"$method\",\"mode\":\"tcp_only\",\"plugin\":\"$plugin\",\"plugin_opts\":\"$plugin_opts\"}" >/dev/null
@@ -1467,7 +1477,7 @@ Upload_users() {
 			unset -v using
 		done <$HOME_DIR/port.list
 	else
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "No port list file found! Please add a user port first."
 		else
 			Prompt "没有找到端口列表文件！请先添加端口。"
@@ -1478,13 +1488,13 @@ Upload_users() {
 
 Forced_offline() {
 	while true; do
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Introduction "Please enter the port of the user who needs to be forced offline"
 		else
 			Introduction "请输入需要离线的端口"
 		fi
-		read -n5 port
-		if is_number $port && [ $port -gt 0 -a $port -le 65535 ]; then
+		read -rn5 port
+		if is_number "$port" && [ "$port" -gt 0 ] && [ "$port" -le 65535 ]; then
 			ss-tool /tmp/ss-manager.socket "remove: {\"server_port\":$port}" >/dev/null
 			break
 		fi
@@ -1496,17 +1506,17 @@ Daemon() {
 		pkill -F /run/ss-daemon.pid 2>/dev/null
 	fi
 	echo $NOW_PID >/run/ss-daemon.pid
-	if [ -r /run/ss-manager.pid -a -r /run/ss-daemon.pid ]; then
-		read pid1 </run/ss-manager.pid
-		read pid2 </run/ss-daemon.pid
-		if is_number $pid1 && is_number $pid2; then
-			while [ -d /proc/${pid1} -a -d /proc/${pid2} ]; do
+	if [ -r /run/ss-manager.pid ] && [ -r /run/ss-daemon.pid ]; then
+		read -r pid1 </run/ss-manager.pid
+		read -r pid2 </run/ss-daemon.pid
+		if is_number "$pid1" && is_number "$pid2"; then
+			while [ -d /proc/"${pid1:?}" ] && [ -d /proc/"${pid2:?}" ]; do
 				if [ -s $HOME_DIR/port.list ]; then
 					while IFS= read -r line || [ -n "$line" ]; do
 						Parsing_User "$line"
-						local flow=$(Used_traffic $server_port)
-						if is_number $server_port && is_number $flow && is_number $total; then
-							if [ ${flow:-0} -ge ${total:-0} ]; then
+						local flow=$(Used_traffic "$server_port")
+						if is_number "$server_port" && is_number "$flow" && is_number $total; then
+							if [ "${flow:-0}" -ge ${total:-0} ]; then
 								Delete_users "$server_port" >/dev/null
 							fi
 							unset -v flow
@@ -1522,7 +1532,7 @@ Daemon() {
 Start() {
 	Local_IP
 	if [ ${runing:-false} = true ]; then
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "Please stop first when the service is running!"
 		else
 			Prompt "服务运行中请先停止运行!"
@@ -1530,10 +1540,10 @@ Start() {
 		Press_any_key_to_continue
 	else
 		local cs=6 #6秒启动超时与重试 https://github.com/shadowsocks/shadowsocks-rust/issues/587
-		until [ -S /tmp/ss-manager.socket -a -s /run/ss-manager.pid ]; do
+		until [ -S /tmp/ss-manager.socket ] && [ -s /run/ss-manager.pid ]; do
 			((cs--))
 			if [ ${cs:-0} -eq 0 ]; then
-				if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+				if [ ${Language:=zh-CN} = 'en-US' ]; then
 					Prompt "Timeout to start ssmanager!"
 				else
 					Prompt "启动ssmanager超时!"
@@ -1543,10 +1553,10 @@ Start() {
 			else
 				[ "$ipv6" ] && local first_v6='-6'
 				ssmanager \
-					--acl $HOME_DIR/conf/server_block.acl \
+					--acl ${HOME_DIR:?}/conf/server_block.acl \
 					--manager-address /tmp/ss-manager.socket \
-					--server-host ${ipv4:-$ipv6} \
-					--outbound-bind-addr ${ipv4:-$ipv6} \
+					--server-host "${ipv4:-$ipv6}" \
+					--outbound-bind-addr "${ipv4:-$ipv6}" \
 					--daemonize-pid /run/ss-manager.pid \
 					--daemonize $first_v6
 				sleep 2
@@ -1558,7 +1568,7 @@ Start() {
 		until [ -s /run/ss-daemon.pid ]; do
 			((cs--))
 			if [ ${cs:-0} -eq 0 ]; then
-				if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+				if [ ${Language:=zh-CN} = 'en-US' ]; then
 					Prompt "Daemon start timeout!"
 				else
 					Prompt "守护脚本启动超时!"
@@ -1575,17 +1585,17 @@ Start() {
 
 Stop() {
 	for i in /run/ss-manager.pid /run/ss-daemon.pid; do
-		[ -s $i ] && read kpid <$i
-		[ -d /proc/${kpid:=abcdefg} ] && kill $kpid && rm -f $i
+		[ -s $i ] && read -r kpid <$i
+		[ -d /proc/"${kpid:?}" ] && kill "$kpid" && rm -f $i
 	done
 }
 
 Update_core() {
 	local temp_file=$(mktemp) temp_file2=$(mktemp) update
-	Wget_get_files $temp_file $URL/version/update
+	Wget_get_files "$temp_file" $URL/version/update
 	#sed -i "s=*bin=$HOME_DIR/usr/bin=" $temp_file
-	! shasum -a512 -c $temp_file >>$temp_file2 && update=true || update=false
-	sed -i 's/: /,/g' $temp_file2
+	! shasum -a512 -c "$temp_file" >>"$temp_file2" && update=true || update=false
+	sed -i 's/: /,/g' "$temp_file2"
 	${python:=python3} <<-EOF
 		from rich.console import Console
 		from rich.table import Table
@@ -1608,24 +1618,24 @@ Update_core() {
 		console = Console()
 		console.print(table, justify="left")
 	EOF
-	rm -f $temp_file $temp_file2
+	rm -f "$temp_file" "$temp_file2"
 	if $update; then
-		rm -rf $HOME_DIR/usr $HOME_DIR/conf
+		rm -rf ${HOME_DIR:?}/usr ${HOME_DIR:?}/conf
 		Check
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "Please restart all services of this script manually to apply the update."
 		else
 			Prompt "请手动重启本脚本的所有服务以应用更新。"
 		fi
 		Exit
 	else
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "No updates found!"
 		else
 			Prompt "未发现任何更新！"
 		fi
 	fi
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		echo -e "\e[1mHelp and Feedback: \e[0m\e[1;34mhttps://github.com/yiguihai/shadowsocks_install\e[0m\n"
 	else
 		echo -e "\e[1m帮助与反馈: \e[0m\e[1;34mhttps://github.com/yiguihai/shadowsocks_install\e[0m\n"
@@ -1634,12 +1644,12 @@ Update_core() {
 }
 
 Uninstall() {
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
 		Introduction "Are you sure you want to uninstall? (Y/N)"
 	else
 		Introduction "确定要卸载吗? (Y/N)"
 	fi
-	read -p "(${mr:=默认}: N): " -n1 delete
+	read -rp "(${mr:=默认}: N): " -n1 delete
 	if [[ $delete =~ ^[Yy]$ ]]; then
 		systemctl stop ss-main.service
 		systemctl disable ss-main.service
@@ -1649,18 +1659,18 @@ Uninstall() {
 		Stop
 		Close_traffic_forward
 		rm -rf $HOME_DIR
-		rm -f $0
+		rm -f "$0"
 		rm -f /usr/local/bin/ss-main
-		${HOME}/.acme.sh/acme.sh --uninstall
-		rm -rf ${HOME}/.acme.sh
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		"${HOME}"/.acme.sh/acme.sh --uninstall
+		rm -rf "${HOME}"/.acme.sh
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "Uninstallation is complete! (It is better to reboot the system)"
 		else
 			Prompt "已卸载！(最好重启一下)"
 		fi
 		Exit
 	else
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			Prompt "已取消操作..."
 		else
 			Prompt "Canceled operation..."
@@ -1671,10 +1681,10 @@ Uninstall() {
 
 ShadowsocksR_Link_Decode() {
 	local link a b server_port protocol method obfs password other obfsparam protoparam remarks group
-	read -p "请输入SSR链接: " link
+	read -rp "请输入SSR链接: " link
 	[[ $link != "ssr://"* || -z $link ]] && Exit
 	a=${link#ssr\:\/\/}
-	b=$(echo $a | base64 -d 2>&-)
+	b=$(echo "$a" | base64 -d 2>&-)
 	i=0
 	IFS=':'
 	for c in ${b%\/}; do
@@ -1696,7 +1706,7 @@ ShadowsocksR_Link_Decode() {
 			obfs=$c
 			;;
 		6)
-			password=$(echo ${c%\/\?*} | base64 -d 2>&-) #再解一次base64被坑了好久
+			password=$(echo "${c%\/\?*}" | base64 -d 2>&-) #再解一次base64被坑了好久
 			other=${c#*\/\?}
 			;;
 		esac
@@ -1705,10 +1715,10 @@ ShadowsocksR_Link_Decode() {
 	for d in $other; do
 		case ${d%\=*} in
 		obfsparam)
-			obfsparam=$(echo ${d#*\=} | base64 -d 2>&-)
+			obfsparam=$(echo "${d#*\=}" | base64 -d 2>&-)
 			;;
 		protoparam)
-			protoparam=$(echo ${d#*\=} | base64 -d 2>&-)
+			protoparam=$(echo "${d#*\=}" | base64 -d 2>&-)
 			;;
 		remarks)
 			remarks=${d#*\=} #不解码了不规范的命名会乱码
@@ -1770,12 +1780,12 @@ Start_traffic_forward() {
 		224.0.0.0/4
 		240.0.0.0/4
 		255.255.255.255/32
-		${server}/32
+		"$server"/32
 	)
 	iptables -w -t nat -N SHADOWSOCKS
 	ipset create ipv4_lan hash:net
-	for i in ${ipv4_lan[@]}; do
-		ipset add ipv4_lan $i
+	for i in "${ipv4_lan[@]}"; do
+		ipset add ipv4_lan "$i"
 	done
 	ipset create traffic_forward hash:net
 	iptables -w -t nat -A SHADOWSOCKS -p tcp -m set --match-set ipv4_lan dst -j RETURN
@@ -1790,10 +1800,10 @@ Start_nginx_program() {
 	Create_certificate
 	local dl=()
 	if [ ! -f $HOME_DIR/usr/bin/nginx ] || [ ! -x $HOME_DIR/usr/bin/nginx ]; then
-		dl+=($URL/usr/sbin/nginx+$HOME_DIR/usr/bin/nginx)
+		dl+=("$URL/usr/sbin/nginx+$HOME_DIR/usr/bin/nginx")
 	fi
 	if [ ! -f $HOME_DIR/usr/bin/php-fpm ] || [ ! -x $HOME_DIR/usr/bin/php-fpm ]; then
-		dl+=($URL/usr/sbin/php-fpm+$HOME_DIR/usr/bin/php-fpm)
+		dl+=("$URL/usr/sbin/php-fpm+$HOME_DIR/usr/bin/php-fpm")
 	fi
 	if [ ! -d $HOME_DIR/usr/logs ]; then
 		mkdir -p $HOME_DIR/usr/logs
@@ -1821,7 +1831,7 @@ Start_nginx_program() {
 						#https://www.v2fly.org/config/transport/grpc.html#grpcobject
 						cat >>$HOME_DIR/conf/v2ray_list.conf <<-EOF
 
-							location /$(Parsing_plugin_opts $plugin_opts "serviceName")/Tun {
+							location /$(Parsing_plugin_opts "$plugin_opts" "serviceName")/Tun {
 							    include    v2safe.conf;
 							    grpc_pass ${v2_protocols2}://${ipv4:-[$ipv6]}:${server_port};
 							}
@@ -1831,7 +1841,7 @@ Start_nginx_program() {
 				else
 					cat >>$HOME_DIR/conf/v2ray_list.conf <<-EOF
 
-						location /$(Parsing_plugin_opts $plugin_opts "path") {
+						location /$(Parsing_plugin_opts "$plugin_opts" "path") {
 						    include    v2safe.conf;
 						    proxy_pass ${v2_protocols}://${ipv4:-[$ipv6]}:${server_port};
 						    include    proxy.conf;
@@ -1845,29 +1855,29 @@ Start_nginx_program() {
 		Prompt "没有找到端口列表文件"
 		Exit
 	fi
-	if [ -z $tls_common_name ]; then
+	if [ -z "$tls_common_name" ]; then
 		Prompt "无法获取域名信息！"
 		Exit
 	fi
 	if [ ! -s $HOME_DIR/conf/mime.types ]; then
-		dl+=($URL/usr/conf/mime.types+$HOME_DIR/conf/mime.types)
+		dl+=("$URL/usr/conf/mime.types+$HOME_DIR/conf/mime.types")
 	fi
 	for i in v2safe.conf add_header.conf v2ray-plugin.conf proxy.conf nginx.conf general.conf fastcgi_params.conf php-fpm.conf www.conf; do
 		if [ ! -s $HOME_DIR/conf/$i ]; then
-			dl+=($URL/conf/$i+$HOME_DIR/conf/$i)
+			dl+=("$URL/conf/$i+$HOME_DIR/conf/$i")
 		fi
 	done
 	for i in 50x.html index.html; do
 		if [ ! -s $HOME_DIR/web/$i ]; then
-			dl+=($URL/usr/html/$i+$HOME_DIR/web/$i)
+			dl+=("$URL/usr/html/$i+$HOME_DIR/web/$i")
 		fi
 	done
-	if [ ${#dl[@]} -gt 0 ]; then
-		downloader ${dl[@]}
-		chmod +x $HOME_DIR/usr/bin/nginx $HOME_DIR/usr/bin/php-fpm
+	if [ "${#dl[@]}" -gt 0 ]; then
+		downloader "${dl[@]}"
+		chmod +x "$HOME_DIR"/usr/bin/nginx "$HOME_DIR"/usr/bin/php-fpm
 	fi
-	for i in ${dl[@]}; do
-		if [ ! -f ${i##*+} ]; then
+	for i in "${dl[@]}"; do
+		if [ ! -f "${i##*+}" ]; then
 			Prompt "文件 ${i##*+} 下载失败！"
 			Exit
 		fi
@@ -1909,9 +1919,9 @@ Start_nginx_program() {
 Reload_nginx() {
 	local ngx
 	if [ -s /run/nginx.pid ]; then
-		read ngx </run/nginx.pid
+		read -r ngx </run/nginx.pid
 	fi
-	if [ -d /proc/${ngx:=nginxx} ]; then
+	if [ -d /proc/"${ngx:?}" ]; then
 		Start_nginx_program reload
 	fi
 }
@@ -1920,7 +1930,7 @@ Advanced_features() {
 	local two=0
 	while true; do
 		((two++))
-		if [ $two -le 1 ]; then
+		if [ "$two" -le 1 ]; then
 			#免费节点
 			#https://lncn.org/
 			#https://m.ssrtool.us/free_ssr
@@ -1931,9 +1941,9 @@ Advanced_features() {
 		fi
 		local srd ngx pfm ret_code ssr_on
 		if [ -s /run/ssr-redir.pid ]; then
-			read srd </run/ssr-redir.pid
+			read -r srd </run/ssr-redir.pid
 		fi
-		if [ -d /proc/${srd:=ssr-dir} ]; then
+		if [ -d /proc/"${srd:?}" ]; then
 			ret_code=$(curl --silent --output /dev/null --write-out '%{http_code}' --connect-timeout 2 --max-time 4 --url https://www.google.com)
 			#https://stackoverflow.com/a/28356429
 			if [[ ${ret_code:-0} != +(200|301|302) ]]; then
@@ -1945,12 +1955,12 @@ Advanced_features() {
 			ssr_on="false"
 		fi
 		if [ -s /run/nginx.pid ]; then
-			read ngx </run/nginx.pid
+			read -r ngx </run/nginx.pid
 		fi
-		if [ -d /proc/${ngx:=nginxx} ]; then
+		if [ -d /proc/"${ngx:?}" ]; then
 			if [ -s $HOME_DIR/ssl/fullchain.cer ]; then
 				if ! openssl x509 -checkend 86400 -noout -in $HOME_DIR/ssl/fullchain.cer >/dev/null; then
-					if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+					if [ ${Language:=zh-CN} = 'en-US' ]; then
 						echo -e '\033[7;31;43mCertificate has expired or will do so within 24 hours!\033[0m'
 					else
 						echo -e '\033[7;31;43m证书已过期或将在24小时内过期!\033[0m'
@@ -1963,9 +1973,9 @@ Advanced_features() {
 			nginx_on="--standalone"
 		fi
 		if [ -s /run/php-fpm.pid ]; then
-			read pfm </run/php-fpm.pid
+			read -r pfm </run/php-fpm.pid
 		fi
-		if [ -d /proc/${pfm:=pfmcj} ]; then
+		if [ -d /proc/"${pfm:?}" ]; then
 			echo -e "\033[1mphp-fpm运行中 PID: \033[0m\033[7m$pfm\033[0m"
 		fi
 		cat <<EOF
@@ -1990,7 +2000,7 @@ Advanced_features() {
 —————————————— 脚本设置 ——————————————
 17. 双栈切换
 EOF
-		read -p $'请选择 \e[95m1-17\e[0m: ' -n2 action
+		read -rp $'请选择 \e[95m1-17\e[0m: ' -n2 action
 		echo
 		case $action in
 		1)
@@ -2008,16 +2018,16 @@ EOF
 			ShadowsocksR_Link_Decode
 			;;
 		4)
-			read -p "请输入IP地址: " aip
-			ipset add traffic_forward $aip
+			read -rp "请输入IP地址: " aip
+			ipset add traffic_forward "$aip"
 			;;
 		5)
 			#https://support.google.com/a/answer/10026322?hl=zh-Hans#
 			local google_ipv4_ranges=$(curl --silent --connect-timeout 5 https://www.gstatic.com/ipranges/goog.json | jq -r '.prefixes[].ipv4Prefix' | tr '\n' '@') && {
 				IFS='@'
 				for i in $google_ipv4_ranges; do
-					if [ $i != 'null' ]; then
-						[ "$i" ] && ipset add traffic_forward $i
+					if [ "$i" != 'null' ]; then
+						[ "$i" ] && ipset add traffic_forward "$i"
 					fi
 				done
 			}
@@ -2026,7 +2036,7 @@ EOF
 			local cloudflare_ipv4_ranges=$(curl --silent --connect-timeout 5 https://www.cloudflare.com/ips-v4 | grep -oE '([0-9]+\.){3}[0-9]+?\/[0-9]+?' | tr '\n' '@') && {
 				IFS='@'
 				for i in $cloudflare_ipv4_ranges; do
-					[ "$i" ] && ipset add traffic_forward $i
+					[ "$i" ] && ipset add traffic_forward "$i"
 				done
 			}
 			;;
@@ -2061,7 +2071,7 @@ EOF
 			openssl x509 -dates -noout -in $HOME_DIR/ssl/fullchain.cer
 			#openssl x509 -enddate -noout -in $HOME_DIR/ssl/fullchain.cer #过期日
 			Introduction "确定要更新吗? (Y/N)"
-			read -p "(${mr:=默认}: N): " -n1 delete
+			read -rp "(${mr:=默认}: N): " -n1 delete
 			if [[ $delete =~ ^[Yy]$ ]]; then
 				rm -f $HOME_DIR/ssl/*
 				Create_certificate
@@ -2081,8 +2091,8 @@ EOF
 7. X Prober
 8. 爱特文件管理器
 EOF
-			read -p $'请选择 \e[95m1-8\e[0m: ' -n1 action
-			is_number $action && [ $action -ge 1 -a $action -le 8 ] && {
+			read -rp $'请选择 \e[95m1-8\e[0m: ' -n1 action
+			is_number "$action" && [ "$action" -ge 1 ] && [ "$action" -le 8 ] && {
 				rm -rf $HOME_DIR/web
 				case $action in
 				1)
@@ -2123,8 +2133,8 @@ EOF
 3. 启用iptables防护 $(iptables -w -t filter -C INPUT -p tcp -m multiport --dport 80,443 -m set ! --match-set cdn_only4 src -j REJECT --reject-with tcp-reset >/dev/null 2>&1 && echo "(true)")
 4. 取消iptables防护
 EOF
-			read -p $'请选择 \e[95m1-4\e[0m: ' -n1 action
-			is_number $action && [ $action -ge 1 -a $action -le 4 ] && {
+			read -rp $'请选择 \e[95m1-4\e[0m: ' -n1 action
+			is_number "$action" && [ "$action" -ge 1 ] && [ "$action" -le 4 ] && {
 				if [ ! -s /tmp/ips4 ] || [ ! -s /tmp/ips6 ]; then
 					Wget_get_files /tmp/ips4 https://www.cloudflare.com/ips-v4
 					Wget_get_files /tmp/ips6 https://www.cloudflare.com/ips-v6
@@ -2155,10 +2165,10 @@ EOF
 					ipset create cdn_only4 hash:net family inet
 					ipset create cdn_only6 hash:net family inet6
 					while IFS= read -r line || [ -n "$line" ]; do
-						[ "$line" ] && ipset add cdn_only4 $line
+						[ "$line" ] && ipset add cdn_only4 "$line"
 					done </tmp/ips4
 					while IFS= read -r line || [ -n "$line" ]; do
-						[ "$line" ] && ipset add cdn_only6 $line
+						[ "$line" ] && ipset add cdn_only6 "$line"
 					done </tmp/ips6
 					iptables -w -t filter -A INPUT -p tcp -m multiport --dport 80,443 -m set ! --match-set cdn_only4 src -j REJECT --reject-with tcp-reset #禁止非CDN来源访问(tcp连接重置)
 					ip6tables -w -t filter -A INPUT -p tcp -m multiport --dport 80,443 -m set ! --match-set cdn_only6 src -j REJECT --reject-with tcp-reset
@@ -2183,8 +2193,8 @@ EOF
 2. 关闭订阅 $([ ! -s $HOME_DIR/web/subscriptions.php ] && echo "(true)")
 EOF
 
-				read -p $'请选择 \e[95m1-2\e[0m: ' -n1 action
-				is_number $action && [ $action -ge 1 -a $action -le 2 ] && {
+				read -rp $'请选择 \e[95m1-2\e[0m: ' -n1 action
+				is_number "$action" && [ "$action" -ge 1 ] && [ "$action" -le 2 ] && {
 					case $action in
 					1)
 						Wget_get_files $HOME_DIR/web/subscriptions.php $URL/src/subscriptions.php
@@ -2215,8 +2225,8 @@ EOF
   2. IPv4 $([ "$Protocol" = "ipv4" ] && echo "(true)")
   3. IPv6 $([ "$Protocol" = "ipv6" ] && echo "(true)")
 EOF
-			read -p $'请选择 \e[95m1-3\e[0m: ' -n1 action
-			is_number $action && [ $action -ge 1 -a $action -le 3 ] && {
+			read -rp $'请选择 \e[95m1-3\e[0m: ' -n1 action
+			is_number "$action" && [ "$action" -ge 1 ] && [ "$action" -le 3 ] && {
 				case $action in
 				1)
 					Protocol=auto
@@ -2248,10 +2258,10 @@ Language() {
   1. English (US)
   2. Chinese (PRC)
 EOF
-	if [[ ${Language:=zh-CN} == 'en-US' ]]; then
-		read -p $'请选择需要切换的语言 [\e[95m1-2\e[0m]:' -n1 un_select
+	if [ ${Language:=zh-CN} = 'en-US' ]; then
+		read -rp $'请选择需要切换的语言 [\e[95m1-2\e[0m]:' -n1 un_select
 	else
-		read -p $'Please enter a number [\e[95m1-2\e[0m]:' -n1 un_select
+		read -rp $'Please enter a number [\e[95m1-2\e[0m]:' -n1 un_select
 	fi
 	echo
 	case $un_select in
@@ -2285,11 +2295,11 @@ else
 	first=0
 	while true; do
 		((first++))
-		[ $first -le 1 ] && Check
+		[ "$first" -le 1 ] && Check
 		clear
 		Author
 		Status
-		if [[ ${Language:=zh-CN} == 'en-US' ]]; then
+		if [ ${Language:=zh-CN} = 'en-US' ]; then
 			cat <<EOF
   1. User Management->>
   2. Turn on service 
@@ -2299,7 +2309,7 @@ else
   6. 更换语言
   7. Advanced Features->>
 EOF
-			read -p $'Please enter a number [\e[95m1-7\e[0m]:' -n1 action
+			read -rp $'Please enter a number [\e[95m1-7\e[0m]:' -n1 action
 			mr="Default"
 		else
 			cat <<EOF
@@ -2311,7 +2321,7 @@ EOF
   6. Language
   7. 高级功能->>
 EOF
-			read -p $'请选择 [\e[95m1-7\e[0m]: ' -n1 action
+			read -rp $'请选择 [\e[95m1-7\e[0m]: ' -n1 action
 		fi
 		echo
 		case $action in

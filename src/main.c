@@ -18,7 +18,7 @@ int main( argc, argv ) int argc; char *argv[]; {
 	}
 
 	struct  sockaddr_un	cliun, serun;
-	char			buf[8192];
+	char			buf[1024];
 	int			sockfd, len;
 
 
@@ -65,7 +65,7 @@ int main( argc, argv ) int argc; char *argv[]; {
 		exit( 1 );
 	}
 
-	if ( read( sockfd, buf, 8192 ) < 0 )
+	if ( read( sockfd, buf, 256 ) < 0 )
 	{
 		perror( "reading stream message" );
 		exit( 1 );

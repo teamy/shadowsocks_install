@@ -217,10 +217,10 @@ jobs:
         #make -j2
         #make install
         #make distclean
-        #strip /etc/ssmanager/usr/bin/python3.9
-        #upx --best --ultra-brute /etc/ssmanager/usr/bin/python3.9
-        #/etc/ssmanager/usr/bin/python3.9 -V
-        #tar zcf /etc/ssmanager/usr/python-${python}.tar.gz -C /etc/ssmanager/usr app  bin  include  lib  sbin  share
+        #strip /etc/ssmanager/usr/bin/python3
+        #upx --best --ultra-brute /etc/ssmanager/usr/bin/python3
+        #/etc/ssmanager/usr/bin/python3 -V
+        #tar zcf /etc/ssmanager/usr/python-${python}.tar.gz -C /etc/ssmanager/usr bin  include  lib  sharei
         #echo "cp -vf /etc/ssmanager/usr/python-${python}.tar.gz ${GITHUB_WORKSPACE}/backups" >> /tmp/outputs.sh
 
     - name: openssl
