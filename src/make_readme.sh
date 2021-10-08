@@ -1,4 +1,6 @@
-cat >${GITHUB_WORKSPACE}/README.md <<'EOF'
+#!/usr/bin/env bash
+
+cat >"${GITHUB_WORKSPACE}/README.md" <<'EOF'
 [![build](https://github.com/yiguihai/shadowsocks_install/actions/workflows/build.yml/badge.svg?branch=dev)](https://github.com/yiguihai/shadowsocks_install/actions?query=branch:dev)  
 **Python >= 3.6**  
 更多介绍与教程请查看[wiki](https://github.com/yiguihai/shadowsocks_install/wiki)   
@@ -28,7 +30,7 @@ systemctl disable ss-main
 EOF
 
 if [ -s /tmp/upgrade.log ]; then
-	cat >>${GITHUB_WORKSPACE}/README.md <<EOF
+	cat >>"${GITHUB_WORKSPACE}/README.md" <<EOF
 <details open>
   <summary>更新记录</summary>
   <table>
