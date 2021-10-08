@@ -67,7 +67,7 @@ command_exists() {
 	command -v "$@" >/dev/null 2>&1
 }
 
-#https://stackoverflow.com/a/2704760
+#https://stackoverflow.com/a/808740
 is_number() {
 	[ -n "$1" ] && [ "$1" -eq "$1" ] 2>/dev/null
 }
@@ -366,7 +366,7 @@ Create_certificate() {
 	tls_key="$HOME_DIR"/ssl/server.key
 	tls_cert="$HOME_DIR"/ssl/server.cer
 	until [ -s $tls_key ] || [ -s $tls_cert ]; do
-		if [ -z "$nginx_on" ] && [ "$(netstat -ln | grep LISTEN | grep ":80 ")" ]; then
+		if [ -z "$nginx_on" ] && netstat -ln | grep 'LISTEN' | grep -q ':80 '; then
 			if [ ${Language:=zh-CN} = 'en-US' ]; then
 				Prompt "Network port 80 is occupied by other processes!"
 			else
@@ -413,7 +413,7 @@ EOF
 		fi
 		until [ "$tls_common_name" ]; do
 			read -rp "(${mr:=默认}: example.com): " tls_common_name
-			if [ -z "$(echo "$tls_common_name" | grep -oE '^([a-zA-Z0-9](([a-zA-Z0-9-]){0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$')" ]; then
+			if ! echo "$tls_common_name" | grep -qoE '^([a-zA-Z0-9](([a-zA-Z0-9-]){0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'; then
 				unset -v tls_common_name
 			fi
 		done
@@ -546,8 +546,8 @@ Check() {
 		esac
 		#echo $(((az * 100 / ${#package_list2[*]} * 100) / 100)) | whiptail --gauge "Please wait while installing" 6 60 0
 		Progress_Bar "$az" ${#package_list2[*]} "Installing $i"
-		$coi 1>/dev/null
-		if [ $? -ne 0 ]; then
+
+		if ! $coi 1>/dev/null; then
 			Prompt "There is an exception when installing the program!"
 			Exit
 		fi
@@ -771,7 +771,9 @@ V2ray_plugin() {
 				Introduction "请输入一个监听路径(url path)"
 			fi
 			read -rp "(${mr:=默认}: ${v2ray_paths%% *}): " v2ray_path
-			[ -z "$(echo "$v2ray_path" | grep -oE '^[A-Za-z0-9]+$')" ] && unset -v v2ray_path
+			if ! echo "$v2ray_path" | grep -qoE '^[A-Za-z0-9]+$'; then
+				unset -v v2ray_path
+			fi
 			[ -z "$v2ray_path" ] && v2ray_path=${v2ray_paths%% *}
 			#[ "${v2ray_path:0:1}" != "/" ] && v2ray_path="/$v2ray_path"
 			Prompt "$v2ray_path"
@@ -785,7 +787,7 @@ V2ray_plugin() {
 				Introduction "请输入gRPC服务的名称(需要客户端支持否则请保持默认)"
 			fi
 			read -rp "(${mr:=默认}: GunService): " v2ray_servicename
-			if ! echo "$v2ray_servicename" | grep -oE '^[A-Za-z0-9]+$'; then
+			if ! echo "$v2ray_servicename" | grep -qoE '^[A-Za-z0-9]+$'; then
 				unset -v v2ray_servicename
 			fi
 			[ -z "$v2ray_servicename" ] && v2ray_servicename=GunService
@@ -934,7 +936,7 @@ Shadowsocks_info_input() {
 				unset -v server_port
 				continue
 			fi
-			if [ "$(netstat -ln | grep LISTEN | grep ":$server_port ")" ]; then
+			if netstat -ln | grep 'LISTEN' | grep -q ":$server_port "; then
 				if [ ${Language:=zh-CN} = 'en-US' ]; then
 					Prompt "The port is occupied by another process!"
 				else
@@ -2054,7 +2056,7 @@ EOF
 			;;
 		11)
 			if [ "$nginx_on" = "--standalone" ]; then
-				if [ -z "$(netstat -ln | grep LISTEN | grep ':80 \|:443 ')" ]; then
+				if ! netstat -ln | grep 'LISTEN' | grep -q ':80 \|:443 '; then
 					Start_nginx_program
 				else
 					Prompt "80或443端口被其它进程占用！"
