@@ -4,7 +4,7 @@
 ### 使用方法
 安装脚本
 ```Shell
-wget --no-check-certificate -O /usr/local/bin/ss-main https://github.com/yiguihai/shadowsocks_install/raw/dev/usr/bin/ss-main  
+wget --no-check-certificate -O /usr/local/bin/ss-main https://github.com/teamy/shadowsocks_install/raw/dev/usr/bin/ss-main  
 chmod +x /usr/local/bin/ss-main
 ```
 安装脚本(CDN)
